@@ -1,0 +1,77 @@
+import tkinter as tk
+from tkinter import ttk
+from googletrans import Translator import sqlite3
+# Function for translating text def translate_text():
+text = source_text.get("1.0", "end-1c") source_lang = source_language.get() target_lang = target_language.get()
+translator = Translator()
+translated_text = translator.translate(text, src=source_lang, dest=target_lang).text
+# Insert the translation into the database
+conn = sqlite3.connect("translation_history.db")
+cursor = conn.cursor()
+cursor.execute("INSERT INTO translations (source_language, target_language, source_text, translated_text) VALUES (?, ?, ?, ?)",
+(source_lang, target_lang, text, translated_text)) conn.commit()
+conn.close()
+translated_result.delete("1.0", "end") translated_result.insert("1.0", translated_text)
+# Update the translation history in the Treeview update_translation_history()
+# Function to update the translation history in the Treeview
+   def update_translation_history():
+# Clear the existing items in the Treeview for item in translation_tree.get_children():
+translation_tree.delete(item)
+# Retrieve the translation history from the database
+conn = sqlite3.connect("translation_history.db")
+cursor = conn.cursor()
+cursor.execute("SELECT source_text, target_language, translated_text FROM translations")
+rows = cursor.fetchall() conn.close()
+# Populate the Treeview with translation data for row in rows:
+translation_tree.insert("", "end", values=row)
+# Function to clear the translation history def clear_history():
+# Clear the translation history from the database conn = sqlite3.connect("translation_history.db") cursor = conn.cursor() cursor.execute("DELETE FROM translations") conn.commit()
+conn.close()
+# Update the translation history in the Treeview update_translation_history()
+# Create the main window
+window = tk.Tk() window.title("Language Translator")
+ 
+   window.state("zoomed") # Maximize the window
+# Create a frame to center the content vertically and horizontally
+frame = ttk.Frame(window, padding=10)
+frame.grid(column=0, row=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+frame.columnconfigure(0, weight=1) # Make the frame expand to fill the window horizontally
+frame.rowconfigure(1, weight=1) # Make the frame expand to fill the window vertically
+# Styling
+frame.configure(padding=(10, 10))
+frame["style"] = "TFrame"
+frame.configure(relief="ridge", borderwidth=2, padding=(10, 10))
+style = ttk.Style()
+style.configure("TFrame", background="lavender")
+source_label = ttk.Label(frame, text="Enter text to translate:") source_label.grid(column=0, row=0, columnspan=2, sticky=tk.W) source_label.configure(font=("Calibri", 16, "bold"), foreground="blue")
+source_text = tk.Text(frame, height=10, width=80) source_text.grid(column=0, row=1, columnspan=2)
+source_language_label = ttk.Label(frame, text="Source Language:") source_language_label.grid(column=0, row=2, sticky=tk.W) source_language_label.configure(font=("Helvetica", 12))
+source_languages = ["Auto-detect", "English", "Spanish", "French", "German", "Chinese", "Japanese", "Italian", "Dutch", "Korean", "Marathi", "Kannada"]
+source_language = ttk.Combobox(frame, values=source_languages) source_language.grid(column=1, row=2) source_language.set("Auto-detect")
+ 
+   target_language_label = ttk.Label(frame, text="Target Language:") target_language_label.grid(column=0, row=3, sticky=tk.W) target_language_label.configure(font=("Helvetica", 12))
+target_languages = ["English", "Spanish", "French", "German", "Chinese", "Japanese", "Italian", "Dutch", "Korean", "Marathi", "Kannada"]
+target_language = ttk.Combobox(frame, values=target_languages) target_language.grid(column=1, row=3) target_language.set("English")
+# Define a custom style for the button to increase font size
+button_style = ttk.Style()
+button_style.configure("TButton", font=("Times New Roman", 14, "bold"))
+translate_button = ttk.Button(frame, text="Translate", command=translate_text, style="TButton")
+translate_button.grid(column=0, row=4, columnspan=2)
+translated_label = ttk.Label(frame, text="Translated text:") translated_label.grid(column=0, row=5, columnspan=2, sticky=tk.W) translated_label.configure(font=("Times New Roman", 16, "bold"), foreground="blue")
+translated_result = tk.Text(frame, height=10, width=80) translated_result.grid(column=0, row=6, columnspan=2)
+# Create a button to clear the translation history
+clear_history_button = ttk.Button(frame, text="Clear History", command=clear_history, style="TButton")
+clear_history_button.grid(column=0, row=8, columnspan=2, pady=10) # Create a Treeview to display translation history in a tabular form
+ 
+translation_tree = ttk.Treeview(frame, columns=("Source Text", "Target Language", "Translated Text"), show="headings")
+translation_tree.heading("Source Text", text="Source Text") translation_tree.heading("Target Language", text="Target Language") translation_tree.heading("Translated Text", text="Translated Text") translation_tree.column("Source Text", width=300) translation_tree.column("Target Language", width=150) translation_tree.column("Translated Text", width=300) translation_tree.grid(column=0, row=9, columnspan=2, padx=10, pady=10)
+# Connect to the SQLite database and create a table
+conn = sqlite3.connect("translation_history.db")
+cursor = conn.cursor()
+cursor.execute('''CREATE TABLE IF NOT EXISTS translations (
+id INTEGER PRIMARY KEY AUTOINCREMENT, source_language TEXT,
+target_language TEXT,
+source_text TEXT,
+translated_text TEXT)''' )
+# Update the translation history in the Treeview update_translation_history()
+# Run the GUI application window.mainloop()
